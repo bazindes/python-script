@@ -23,15 +23,19 @@ hosts = [('10.100.28.112' , 2),('10.100.28.113' , 0),('10.103.28.103' , 4),('10.
 
 def getMi():
     miSend = redis.StrictRedis(host=hosts[4][0],port=6379, db=hosts[4][1], socket_connect_timeout=2000)
-    miSendUV = redis.StrictRedis(host=hosts[1][0],port=6379, db=hosts[1][1], socket_connect_timeout=2000)
-    nk = [k+'_1_3_1_*_send*' for k in list(map(repl, keys))]
+    nk = [k+'_1_3_1_*_active*' for k in list(map(repl, keys))]
     misKeys = [miSend.keys(k) for k in nk]
     mis = [miSend.get(s) for k in misKeys for s in k]
+    re = [str(x,'utf-8')+':'+str(y,'utf-8') for x,y in list(zip([s for k in misKeys for s in k] , mis))]
+    return re
+
+def getMiUV():
+    miSendUV = redis.StrictRedis(host=hosts[1][0],port=6379, db=hosts[1][1], socket_connect_timeout=2000)
+    nk = [k+'_1_3_1_*_active*' for k in list(map(repl, keys))]
     misuvKeys = [miSendUV.keys(k) for k in nk]
     misuv = [miSendUV.pfcount(s) for k in misuvKeys for s in k]
-    re = [str(x,'utf-8')+':'+str(y,'utf-8') for x,y in list(zip([s for k in misKeys for s in k] , mis))]
     reuv = [str(x,'utf-8')+':'+str(y) for x,y in list(zip([s for k in misuvKeys for s in k] , misuv))]
-    return list(zip(re,reuv))
+    return reuv
 
 def getAndroidSend():
     msgid = redis.StrictRedis(host=hosts[0][0], port=6379, db=hosts[0][1], socket_connect_timeout=2000)
@@ -107,7 +111,6 @@ def getBroadcastNum():
     return [list(broadcast.hgetall(k).keys()) for k in bkeys]
 
 
-
 if __name__ == '__main__':
     lens = [len(i) for i in getBroadcastNum()]
     miNum = [int(i) for i in getMiNum()]
@@ -116,19 +119,12 @@ if __name__ == '__main__':
     iphoneNum = [int(i) for i in getIphoneUV()]
     andr = list(zip(miNum,mqttNum))
     lastMi = ''
-    sums = []
-    for x in range(len(andr)):
-        sum = 0
-        if andr[x][0] == 0:
-            sum = int(andr[x-1][0]) + int(andr[x][1])
-        else:
-            sum = int(andr[x][0]) + int(andr[x][1])
-        sums.append(sum)
     miSend = [an[0]*an[1]for an in list(zip( miNum, lens))]
     mqttSend = [an[0]*an[1]for an in list(zip( mqttNum, lens))]
     iphSend = [an[0]*an[1]for an in list(zip( iphoneNum , lens))]
     ipdSend = [an[0]*an[1]for an in list(zip(ipadNum, lens))]
     misu = getMi()
+    misuv = getMiUV()
 
     # print(miNum)
     # print(miSend)
